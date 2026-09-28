@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Decide For Me</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#171B33; --card:#22274A; --card2:#2B3160;
+    --gold:#FFC845; --coral:#FF6B4A; --text:#F4F2ED; --muted:#9498BE;
+    padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:'Inter',system-ui,sans-serif;
+    display:flex; flex-direction:column; align-items:center;
+    min-height:100%; padding:32px 16px 20px;
+  }
+  h1{
+    font-family:'Space Grotesk',sans-serif; font-weight:700;
+    font-size:clamp(28px,6vw,42px); margin:0 0 4px; text-align:center; letter-spacing:-0.5px;
+  }
+  .tagline{color:var(--muted); margin:0 0 28px; font-size:15px; text-align:center;}
+
+  .adslot{
+    width:100%; max-width:640px; background:var(--card);
+    border:1px dashed #454b7a; border-radius:10px;
+    color:#6b709a; font-size:12px; text-align:center;
+    padding:10px; margin-bottom:20px;
+  }
+
+  .console{
+    width:100%; max-width:420px; background:var(--card);
+    border-radius:24px; padding:28px 24px; box-shadow:0 20px 50px rgba(0,0,0,.35);
+  }
+
+  .tabs{display:flex; gap:8px; margin-bottom:22px;}
+  .tab{
+    flex:1; background:var(--card2); border:none; color:var(--muted);
+    padding:10px 6px; border-radius:10px; font-family:'Inter'; font-weight:600;
+    font-size:13px; cursor:pointer; transition:background .15s, color .15s;
+  }
+  .tab.active{background:var(--gold); color:#171B33;}
+
+  .wheel-wrap{position:relative; width:260px; height:260px; margin:0 auto 22px;}
+  #wheel{width:100%; height:100%; border-radius:50%; transition:transform 3.5s cubic-bezier(.15,.85,.15,1); box-shadow:inset 0 0 0 6px #171B33, 0 0 0 3px #454b7a;}
+  .pointer{
+    position:absolute; top:-4px; left:50%; transform:translateX(-50%);
+    width:0; height:0; border-left:11px solid transparent; border-right:11px solid transparent;
+    border-top:18px solid var(--coral); z-index:3;
+  }
+  .hub{
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    width:54px; height:54px; border-radius:50%; background:var(--bg);
+    display:flex; align-items:center; justify-content:center; font-size:20px;
+    border:3px solid var(--card2); z-index:2;
+  }
+
+  textarea, input[type=text]{
+    width:100%; background:var(--card2); border:1px solid #3a4074; color:var(--text);
+    border-radius:10px; padding:10px 12px; font-family:'Inter'; font-size:14px;
+    resize:vertical; margin-bottom:10px;
+  }
+  textarea:focus, input:focus{outline:2px solid var(--gold); outline-offset:1px;}
+
+  button.spin{
+    width:100%; background:var(--coral); color:#171B33; border:none;
+    font-family:'Space Grotesk'; font-weight:700; font-size:17px;
+    padding:14px; border-radius:12px; cursor:pointer; margin-top:4px;
+    transition:transform .1s, filter .15s;
+  }
+  button.spin:hover{filter:brightness(1.08);}
+  button.spin:active{transform:scale(.98);}
+  button.spin:disabled{opacity:.6; cursor:not-allowed;}
+
+  .result{
+    margin-top:18px; text-align:center; min-height:34px;
+    font-family:'Space Grotesk'; font-weight:700; font-size:22px; color:var(--gold);
+    opacity:0; transform:translateY(6px); transition:opacity .3s, transform .3s;
+  }
+  .result.show{opacity:1; transform:translateY(0);}
+
+  .custom-hint{color:var(--muted); font-size:12px; margin:-4px 0 10px;}
+  .dilemma-display{
+    text-align:center; font-size:14px; color:var(--text); background:var(--card2);
+    border-radius:10px; padding:8px 12px; margin:0 0 18px; font-weight:500;
+  }
+
+  footer{margin-top:22px; color:#5a5f8c; font-size:12px; text-align:center;}
+  @media (prefers-color-scheme:light){ /* keep single dark theme intentionally for the "decisive console" feel */ }
+</style>
+</head>
+<body>
+
+  <h1>Decide For Me</h1>
+  <p class="tagline">Stuck? Spin it. That's the answer now.</p>
+
+  <div class="adslot">Ad space — 320×50 banner</div>
+
+  <div class="console">
+    <div class="tabs">
+      <button class="tab active" data-mode="food">What to eat</button>
+      <button class="tab" data-mode="yesno">Yes or no</button>
+      <button class="tab" data-mode="custom">My own list</button>
+    </div>
+
+    <div id="customInput" style="display:none;">
+      <p class="custom-hint">What are you struggling to decide?</p>
+      <input type="text" id="dilemmaText" placeholder="e.g. Should I text him back?">
+      <p class="custom-hint">Your options — one per line, at least 2.</p>
+      <textarea id="customText" rows="4" placeholder="Pizza&#10;Sushi&#10;Stay home"></textarea>
+    </div>
+    <p id="dilemmaDisplay" class="dilemma-display" style="display:none;"></p>
+
+    <div class="wheel-wrap">
+      <div class="pointer"></div>
+      <svg id="wheel" viewBox="0 0 100 100"></svg>
+      <div class="hub">🎯</div>
+    </div>
+
+    <button class="spin" id="spinBtn">Spin</button>
+    <div class="result" id="result"></div>
+  </div>
+
+  <div class="adslot" style="margin-top:20px;">Ad space — rewarded: "Watch an ad to reroll instantly"</div>
+
+  <footer>New decision, every time. No regrets, only spins.</footer>
+
+<script>
+const sets = {
+  food: ["Pizza","Tacos","Sushi","Salad","Burger","Ramen","Curry","Stay in & cook"],
+  yesno: ["Yes","No","Yes","No","Ask again later","Yes"],
+  custom: []
+};
+let mode = "food";
+let spinning = false;
+const wheel = document.getElementById('wheel');
+const result = document.getElementById('result');
+const spinBtn = document.getElementById('spinBtn');
+const customInput = document.getElementById('customInput');
+const customText = document.getElementById('customText');
+const dilemmaText = document.getElementById('dilemmaText');
+const dilemmaDisplay = document.getElementById('dilemmaDisplay');
+
+function updateDilemmaDisplay(){
+  const val = dilemmaText.value.trim();
+  if(mode === 'custom' && val){
+    dilemmaDisplay.textContent = val;
+    dilemmaDisplay.style.display = 'block';
+  } else {
+    dilemmaDisplay.style.display = 'none';
+  }
+}
+dilemmaText.addEventListener('input', updateDilemmaDisplay);
+
+const palette = ["#FFC845","#FF6B4A","#7CC6FE","#8A6BFF","#5FE0A8","#FF8FB1","#FFD98E","#6BD6D6"];
+
+function currentOptions(){
+  if(mode === 'custom'){
+    const lines = customText.value.split('\n').map(s=>s.trim()).filter(Boolean);
+    return lines.length >= 2 ? lines : ["Add at least","2 options"];
+  }
+  return sets[mode];
+}
+
+function drawWheel(){
+  const opts = currentOptions();
+  const n = opts.length;
+  const slice = 360/n;
+  let html = '';
+  for(let i=0;i<n;i++){
+    const start = i*slice, end = start+slice;
+    const large = slice > 180 ? 1 : 0;
+    const x1 = 50+50*Math.cos(Math.PI*(start-90)/180);
+    const y1 = 50+50*Math.sin(Math.PI*(start-90)/180);
+    const x2 = 50+50*Math.cos(Math.PI*(end-90)/180);
+    const y2 = 50+50*Math.sin(Math.PI*(end-90)/180);
+    html += `<path d="M50,50 L${x1},${y1} A50,50 0 ${large} 1 ${x2},${y2} Z" fill="${palette[i%palette.length]}"/>`;
+    const mid = start+slice/2;
+    const lx = 50+32*Math.cos(Math.PI*(mid-90)/180);
+    const ly = 50+32*Math.sin(Math.PI*(mid-90)/180);
+    const label = opts[i].length > 10 ? opts[i].slice(0,9)+'…' : opts[i];
+    html += `<text x="${lx}" y="${ly}" font-size="6" font-family="Inter" font-weight="600" fill="#171B33" text-anchor="middle" dominant-baseline="middle" transform="rotate(${mid},${lx},${ly})">${label}</text>`;
+  }
+  wheel.innerHTML = html;
+  wheel.style.transform = 'rotate(0deg)';
+}
+
+document.querySelectorAll('.tab').forEach(tab=>{
+  tab.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+    mode = tab.dataset.mode;
+    customInput.style.display = mode === 'custom' ? 'block' : 'none';
+    result.classList.remove('show');
+    updateDilemmaDisplay();
+    drawWheel();
+  });
+});
+customText.addEventListener('input', ()=>{ if(mode==='custom') drawWheel(); });
+
+let totalRotation = 0;
+spinBtn.addEventListener('click', ()=>{
+  if(spinning) return;
+  const opts = currentOptions();
+  if(mode==='custom' && opts[0]==="Add at least") return;
+  spinning = true;
+  spinBtn.disabled = true;
+  result.classList.remove('show');
+
+  const n = opts.length;
+  const slice = 360/n;
+  const winnerIndex = Math.floor(Math.random()*n);
+  const targetAngle = 360 - (winnerIndex*slice + slice/2);
+  totalRotation += 1080 + targetAngle - (totalRotation % 360);
+  wheel.style.transform = `rotate(${totalRotation}deg)`;
+
+  setTimeout(()=>{
+    const q = (mode === 'custom' && dilemmaText.value.trim()) ? dilemmaText.value.trim() + " → " : "";
+    result.textContent = q + opts[winnerIndex];
+    result.classList.add('show');
+    spinning = false;
+    spinBtn.disabled = false;
+  }, 3550);
+});
+
+drawWheel();
+</script>
+</body>
+</html>
